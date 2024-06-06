@@ -1,57 +1,52 @@
-// PLAN: Game of life cells saved as entries in a quad-tree sorted by x/y and
-// bigger/smaller, data structure also keeps track of min/max x & y so it
-// doesn't have to be calculated separately
+#ifndef DATA_STRUCTURE_NEW_H_
+#define DATA_STRUCTURE_NEW_H_
 
 #include <stdbool.h>
-#include <stdlib.h>
-
-struct Cell {
-    int x;
-    int y;
-    // Could also add stuff like age here
-};
-
-struct Field {
-    int xMin;
-    int xMax;
-    int yMin;
-    int yMax;
-    struct QTree *cells;
-};
 
 struct QTree {
-    struct Cell *cell;
-    struct QTree *parent;
-    struct QTree *leftabove;
-    struct QTree *leftunder;
-    struct QTree *rightabove;
-    struct QTree *rightunder;
+  int x;
+  int y;
+  int n;
+
+  // left := x_child <= x
+  // above := y_child <= y
+  // right := not left
+  // under := not above
+
+  struct QTree *leftover;
+  struct QTree *leftunder;
+  struct QTree *rightover;
+  struct QTree *rightunder;
+
+  struct QTree *parent;
 };
 
-struct QTree **traverseTowards(struct QTree **tree, int x, int y);
+struct QTree *traverseTowards(struct QTree *tree, int x, int y);
 
-struct Cell *newCell(int x, int y);
+struct QTree *findCell(struct QTree *tree, int x, int y);
 
-void freeField(struct Field *field);
+struct QTree *newTree(int x, int y, int n, struct QTree *parent);
+
+struct QTree **getParentsPtrToSelf(struct QTree *tree);
 
 void freeTree(struct QTree *tree);
 
-bool removeFromTree(struct QTree **tree, int x, int y);
+bool removeCellFromTree(struct QTree *tree, int x, int y);
 
-bool removeFromField(struct Field *field, int x, int y);
+struct QTree *cleanBranch(struct QTree *tree);
 
-void insertToQTree(struct QTree **tree, struct Cell *cell);
+struct QTree *insertCell(struct QTree *tree, int x, int y);
 
-void insertToField(struct Field *field, struct Cell *cell);
+bool treeFits(struct QTree *tree, int x, int y);
 
-bool isAliveQTree(struct QTree *tree, int x, int y);
+void extendTreeToFit(struct QTree *tree, int x, int y);
 
-bool isAlive(struct Field *field, int x, int y);
+bool isAlive(struct QTree *tree, int x, int y);
 
-int naiveNeighbourCount(struct Field *field, int x, int y);
+int neighbourCount(struct QTree *tree, int x, int y);
 
-struct QTree *balance(struct QTree *tree);
+void nextGeneration(struct QTree *tree);
 
-void traverseWithCallback(struct QTree *tree, void (*callback)(struct Cell *));
+void traverseWithCallbackOnCell(struct QTree *tree, void (*callback)(int x, int y));
 
-void traverseFieldWithCallback(struct Field *field, void (*callback)(struct Cell *));
+#endif // DATA_STRUCTURE_NEW_H_
