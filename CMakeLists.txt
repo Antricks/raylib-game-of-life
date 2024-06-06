@@ -1,10 +1,12 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.15)
 project(game-of-life)
 
-add_executable(game-of-life src/game-of-life.c src/data-structure.c)
+find_package(raylib 3.0 REQUIRED) # Requires at least version 3.0
 
-target_sources(game-of-life PRIVATE src/game-of-life.c)
+set(CMAKE_C_STANDARD 11) # Requires C11 standard
 
-add_subdirectory(include/raylib/)
-target_link_libraries(game-of-life PUBLIC raylib)
-target_include_directories(game-of-life PUBLIC "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/include/raylib")
+add_executable(${PROJECT_NAME} src/game-of-life.c src/data-structure.c)
+
+target_sources(${PROJECT_NAME} PRIVATE src/game-of-life.c)
+
+target_link_libraries(${PROJECT_NAME} raylib)
