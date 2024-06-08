@@ -10,3 +10,9 @@ add_executable(${PROJECT_NAME} src/game-of-life.c src/data-structure.c)
 target_sources(${PROJECT_NAME} PRIVATE src/game-of-life.c)
 
 target_link_libraries(${PROJECT_NAME} raylib)
+
+if (APPLE)
+    target_link_libraries(${PROJECT_NAME} "-framework IOKit")
+    target_link_libraries(${PROJECT_NAME} "-framework Cocoa")
+    target_link_libraries(${PROJECT_NAME} "-framework OpenGL")
+endif()
