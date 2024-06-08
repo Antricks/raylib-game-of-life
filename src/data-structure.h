@@ -21,6 +21,14 @@ struct QTree {
   struct QTree *parent;
 };
 
+int minX(struct QTree *tree);
+
+int maxX(struct QTree *tree);
+
+int minY(struct QTree *tree);
+
+int maxY(struct QTree *tree);
+
 struct QTree *traverseTowards(struct QTree *tree, int x, int y);
 
 struct QTree *findCell(struct QTree *tree, int x, int y);
@@ -31,7 +39,7 @@ struct QTree **getParentsPtrToSelf(struct QTree *tree);
 
 void freeTree(struct QTree *tree);
 
-bool removeCellFromTree(struct QTree *tree, int x, int y);
+bool removeCell(struct QTree *tree, int x, int y);
 
 struct QTree *cleanBranch(struct QTree *tree);
 
@@ -45,7 +53,7 @@ bool isAlive(struct QTree *tree, int x, int y);
 
 int neighbourCount(struct QTree *tree, int x, int y);
 
-void nextGeneration(struct QTree *tree);
+struct QTree *nextGeneration(struct QTree *tree);
 
 void traverseWithCallbackOnCell(struct QTree *tree, void (*callback)(int x, int y));
 

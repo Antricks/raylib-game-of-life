@@ -1,7 +1,11 @@
 #include "data-structure.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <sys/param.h>
+
+#include <stdio.h>
 
 // New data structure concept: Quad tree that spans over a square of 2n×2n
 // If inserted cell is outside that square, new roots with n':=2n are created,
@@ -10,13 +14,81 @@
 // other sub-trees/cells. QTrees of n = 0 could are considered cells. n values
 // are intended to be powers of 2 but it should be okay to use other n's too
 
+int minX(struct QTree *tree) {
+  if (tree == NULL) {
+    return INT_MAX;
+  }
+
+  if (tree->n == 0) {
+    return tree->x;
+  }
+
+  return MIN(MIN(MIN(minX(tree->leftunder), minX(tree->leftover)),
+                 minX(tree->rightunder)),
+             minX(tree->rightover));
+}
+
+int maxX(struct QTree *tree) {
+  if (tree == NULL) {
+    return INT_MIN;
+  }
+
+  if (tree->n == 0) {
+    return tree->x;
+  }
+
+  return MAX(MAX(MAX(maxX(tree->leftunder), maxX(tree->leftover)),
+                 maxX(tree->rightunder)),
+             maxX(tree->rightover));
+}
+
+int minY(struct QTree *tree) {
+  if (tree == NULL) {
+    return INT_MAX;
+  }
+
+  if (tree->n == 0) {
+    return tree->y;
+  }
+
+  return MIN(MIN(MIN(minY(tree->leftunder), minY(tree->leftover)),
+                 minY(tree->rightunder)),
+             minY(tree->rightover));
+}
+
+int maxY(struct QTree *tree) {
+  if (tree == NULL) {
+    return INT_MIN;
+  }
+
+  if (tree->n == 0) {
+    return tree->y;
+  }
+
+  return MAX(MAX(MAX(maxY(tree->leftunder), maxY(tree->leftover)),
+                 maxY(tree->rightunder)),
+             maxY(tree->rightover));
+}
+
+bool inRange(struct QTree *tree, int x, int y) {
+  if (tree->x == x && tree->y == y)
+    return true;
+
+  bool x_in_range = (x <= tree->x && tree->x - x < tree->n) ||
+                    (x > tree->x && x - tree->x <= tree->n);
+  bool y_in_range = (y <= tree->y && tree->y - y < tree->n) ||
+                    (y > tree->y && y - tree->y <= tree->n);
+
+  return x_in_range && y_in_range;
+}
+
 // Traverses as many steps up as necessary and one step down towards some goal
 struct QTree *traverseTowards(struct QTree *tree, int x, int y) {
   if (tree == NULL) {
     return NULL;
   }
 
-  if (abs(x - tree->x) > tree->n || abs(y - tree->y) > tree->n) {
+  if (!inRange(tree, x, y)) {
     if (tree->parent != NULL) {
       return traverseTowards(tree->parent, x, y);
     } else {
@@ -37,8 +109,6 @@ struct QTree *traverseTowards(struct QTree *tree, int x, int y) {
       return tree->rightunder;
     }
   }
-
-  return NULL;
 }
 
 // Traverse until cell is found and return it or null otherwise
@@ -51,7 +121,13 @@ struct QTree *findCell(struct QTree *tree, int x, int y) {
     return tree;
   }
 
-  return findCell(traverseTowards(tree, x, y), x, y);
+  struct QTree *next = traverseTowards(tree, x, y);
+
+  if (next == tree) { // Is this sufficient to recognize deadlocks?
+    return NULL;
+  }
+
+  return findCell(next, x, y);
 }
 
 // Allocates memory and constructs a new tree
@@ -130,7 +206,7 @@ void freeTree(struct QTree *tree) {
 // Traverse towards x/y and remove cell at x/y if found, return true if a cell
 // has been removed. Also removes as much from the containing branch as possible
 // if parent nodes had no other child.
-bool removeCellFromTree(struct QTree *tree, int x, int y) {
+bool removeCell(struct QTree *tree, int x, int y) {
   if (tree == NULL) {
     return false;
   }
@@ -149,7 +225,9 @@ bool removeCellFromTree(struct QTree *tree, int x, int y) {
   return false;
 };
 
-// Removes as many unneeded nodes upwards as possible
+// Removes tree and as many unneeded parent nodes upwards as possible
+// TODO (not vital but would be quite good to have) implement cleaning of
+// unnecessary node with just one cell as child
 struct QTree *cleanBranch(struct QTree *tree) {
   if (tree == NULL) {
     return NULL;
@@ -161,9 +239,6 @@ struct QTree *cleanBranch(struct QTree *tree) {
     freeTree(tree);
     return cleanBranch(parent);
   }
-
-  // TODO (not vital but would be quite good to have) implement cleaning of
-  // unnecessary node with just one cell as child
 
   return tree;
 }
@@ -257,6 +332,7 @@ bool treeFits(struct QTree *tree, int x, int y) {
          (abs(x - tree->x) <= tree->n && abs(y - tree->y) <= tree->n);
 }
 
+// TODO this crashes for some unknown reason
 void extendTreeToFit(struct QTree *tree, int x, int y) {
   // TODO maybe I could use some assert infrastructure to e.g. make sure n is
   // not 0 here. Don't really want to just return from that but also don't want
@@ -319,6 +395,8 @@ bool isAlive(struct QTree *tree, int x, int y) {
 }
 
 int neighbourCount(struct QTree *tree, int x, int y) {
+  printf("---neighbourCount(%i, %i)---\n", x, y);
+
   // cur is used for (hopefully) more efficient traversal
   // instead of having to go from root for every cell
   struct QTree *cur = tree;
@@ -333,6 +411,7 @@ int neighbourCount(struct QTree *tree, int x, int y) {
       search = findCell(cur, x + i, y + j);
 
       if (search != NULL) {
+        printf("found: (%i, %i)\n", search->x, search->y);
         cur = search;
         count++;
       }
@@ -342,8 +421,34 @@ int neighbourCount(struct QTree *tree, int x, int y) {
   return count;
 }
 
-void nextGeneration(struct QTree *tree) {
-  return; // TODO implement
+void _nextGeneration(struct QTree *old, struct QTree *new) {
+  if (old == NULL) {
+    return;
+  }
+
+  if (old->n == 0) {
+    for (int i = -1; i <= 1; i++) {
+      for (int j = -1; j <= 1; j++) {
+        int n = neighbourCount(old, old->x + i, old->y + j);
+        if (n == 3 || (n == 2 && i == 0 && j == 0)) {
+          insertCell(new, old->x + i, old->y + j);
+        }
+      }
+    }
+  } else {
+    _nextGeneration(old->leftover, new);
+    _nextGeneration(old->leftunder, new);
+    _nextGeneration(old->rightover, new);
+    _nextGeneration(old->rightunder, new);
+  }
+}
+
+struct QTree *nextGeneration(struct QTree *tree) {
+  // TODO? I'm not sure if keeping the same parent is sensible here.
+  struct QTree *new = newTree(tree->x, tree->y, tree->n, tree->parent);
+  _nextGeneration(tree, new);
+  freeTree(tree);
+  return new;
 }
 
 void traverseWithCallbackOnCell(struct QTree *tree,
